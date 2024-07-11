@@ -1,10 +1,10 @@
 import catLeft from "./assets/catLeft.png";
-import catRigth from "./assets/catRight.png";
+import catRight from "./assets/catRight.png";
 
 const init = {};
 const imageSrc = {
   catLeft,
-  catRigth,
+  catRight,
 };
 
 const CharacterImages = Object.entries(imageSrc).reduce(
