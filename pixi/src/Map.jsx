@@ -1,6 +1,6 @@
 import "./App.css";
 import CharacterImages from "./CharacterImage";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Stage, Sprite } from "@pixi/react";
 
 const Direction = {
@@ -12,41 +12,41 @@ const Direction = {
 const MAP_X = 800;
 const MAP_Y = 600;
 const SIZE = 12;
-const Map = () => {
-  const catUrl = "http://localhost:5173/src/assets/catLeft.png";
-  const mapUrl = "http://localhost:5173/src/assets/map.png";
 
-  const [catImage, setCatImage] = useState(catUrl);
+const mapUrl = "http://localhost:5173/src/assets/map.png";
+
+const Map = () => {
+  const [catImage, setCatImage] = useState(CharacterImages.catLeft);
   const [catX, setCatX] = useState(500);
   const [catY, setCatY] = useState(150);
 
-  useEffect(() => {
-    const handleArrowKeyDown = (e) => {
+  const handleArrowKeyDown = useCallback(
+    (e) => {
       console.log("handleArrowKeyDown");
       const distance = 12;
       const ArrowKeys = [
         {
-          code: "ArrowUp",
+          code: "KeyW",
           movement: { x: 0, y: -distance },
-          dir: 1,
+          dir: Direction.UP,
           isMoveable: () => catY > 0,
         },
         {
-          code: "ArrowDown",
+          code: "KeyS",
           movement: { x: 0, y: distance },
-          dir: 0,
+          dir: Direction.DOWN,
           isMoveable: () => catY < MAP_Y - SIZE,
         },
         {
-          code: "ArrowRight",
+          code: "KeyD",
           movement: { x: distance, y: 0 },
-          dir: 3,
+          dir: Direction.RIGHT,
           isMoveable: () => catX < MAP_X - SIZE,
         },
         {
-          code: "ArrowLeft",
+          code: "KeyA",
           movement: { x: -distance, y: 0 },
-          dir: 2,
+          dir: Direction.LEFT,
           isMoveable: () => catX > 0,
         },
       ];
@@ -58,7 +58,11 @@ const Map = () => {
         if (e.code === code && isMoveable()) {
           setCatX((prev) => prev + movement.x);
           setCatY((prev) => prev + movement.y);
-          setCatImage(getImageByDirection(dir));
+          setCatImage(
+            dir === Direction.LEFT
+              ? CharacterImages.catLeft
+              : CharacterImages.catRight
+          );
           handled = true;
           break;
         }
@@ -67,30 +71,20 @@ const Map = () => {
       if (handled) {
         e.preventDefault(); // Prevent default scrolling behavior for arrow keys
       }
-    };
+    },
+    [catX, catY]
+  );
 
+  useEffect(() => {
     document.addEventListener("keydown", handleArrowKeyDown);
 
     return () => {
       document.removeEventListener("keydown", handleArrowKeyDown);
     };
-  }, [catX, catY]); // Dependencies for useEffect
-
-  const getImageByDirection = (direction) => {
-    const { catRight, catLeft } = CharacterImages;
-
-    switch (direction) {
-      case Direction.LEFT:
-        return catLeft;
-      case Direction.RIGHT:
-        return catRight;
-      default:
-        return catLeft;
-    }
-  };
+  }, [handleArrowKeyDown]);
 
   return (
-    <Stage x={MAP_X} y={MAP_Y} options={{ background: 0x1099bb }}>
+    <Stage width={MAP_X} height={MAP_Y} options={{ background: 0x1099bb }}>
       <Sprite image={mapUrl} x={0} y={0} />
       <Sprite image={catImage} x={catX} y={catY} />
     </Stage>
