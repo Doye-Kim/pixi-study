@@ -1,22 +1,86 @@
 import CharacterImages from "./CharacterImage";
 import { useState, useEffect, useCallback } from "react";
 import { Sprite } from "@pixi/react";
+import collisions from "./assets/home-collisions";
 
 const Direction = {
   DOWN: 0,
   UP: 1,
-  LEFT: 2,
-  RIGHT: 3,
+  RIGHT: 2,
+  LEFT: 3,
 };
 
-const MAP_X = 800;
-const MAP_Y = 600;
-const SIZE = 12;
+const MAP_X = 512;
+const MAP_Y = 384;
+const SIZE = 32;
+
+class Boundary {
+  static width = 8;
+  static height = 8;
+  constructor({ position }) {
+    this.position = position;
+    this.width = 8;
+    this.height = 8;
+  }
+}
 
 const Character = () => {
-  const [catImage, setCatImage] = useState(CharacterImages.catLeft);
-  const [catX, setCatX] = useState(500);
-  const [catY, setCatY] = useState(150);
+  const [collisionMap, setCollisionMap] = useState([]);
+  const [boundaries, setBoundaries] = useState([]);
+
+  useEffect(() => {
+    const initializeCollisionMap = () => {
+      let tempCollisionMap = [];
+      for (let i = 0; i < collisions.length; i += 61) {
+        tempCollisionMap.push(collisions.slice(i, i + 61));
+      }
+      return tempCollisionMap;
+    };
+
+    const initializeBoundaries = (collisionMap) => {
+      let tempBoundaries = [];
+      collisionMap.forEach((row, i) => {
+        row.forEach((symbol, j) => {
+          if (symbol === 15) {
+            tempBoundaries.push({
+              position: {
+                x: j * Boundary.width,
+                y: i * Boundary.height,
+              },
+              width: Boundary.width,
+              height: Boundary.height,
+            });
+          }
+        });
+      });
+      return tempBoundaries;
+    };
+
+    const collisionMap = initializeCollisionMap();
+    setCollisionMap(collisionMap);
+
+    const boundaries = initializeBoundaries(collisionMap);
+    setBoundaries(boundaries);
+  }, []);
+
+  const [charImage, setCharImage] = useState(CharacterImages.char1F);
+  const [charX, setCharX] = useState(217);
+  const [charY, setCharY] = useState(325);
+
+  const boundaryCollision = useCallback(
+    (x, y) => {
+      return boundaries.some((col) => {
+        console.log(col.width, col.position.x, x, col.position.y, y);
+        return (
+          col.position.x <= x &&
+          col.position.x + col.width >= x &&
+          col.position.y <= y &&
+          col.position.y + col.height >= y
+        );
+      });
+    },
+    [boundaries]
+  );
 
   const handleArrowKeyDown = useCallback(
     (e) => {
@@ -27,40 +91,41 @@ const Character = () => {
           code: "KeyW",
           movement: { x: 0, y: -distance },
           dir: Direction.UP,
-          isMoveable: () => catY > 0,
+          isMoveable: () =>
+            charY > 0 && !boundaryCollision(charX, charY - SIZE),
         },
         {
           code: "KeyS",
           movement: { x: 0, y: distance },
           dir: Direction.DOWN,
-          isMoveable: () => catY < MAP_Y - SIZE,
+          isMoveable: () =>
+            charY < MAP_Y - SIZE && !boundaryCollision(charX, charY + SIZE),
         },
         {
           code: "KeyD",
           movement: { x: distance, y: 0 },
           dir: Direction.RIGHT,
-          isMoveable: () => catX < MAP_X - SIZE,
+          isMoveable: () =>
+            charX < MAP_X - SIZE && !boundaryCollision(charX + SIZE, charY),
         },
         {
           code: "KeyA",
           movement: { x: -distance, y: 0 },
           dir: Direction.LEFT,
-          isMoveable: () => catX > 0,
+          isMoveable: () =>
+            charX > 0 && !boundaryCollision(charX - SIZE, charY),
         },
       ];
 
       let handled = false;
+
       for (let i = 0; i < ArrowKeys.length; i++) {
         const { code, movement, dir, isMoveable } = ArrowKeys[i];
 
         if (e.code === code && isMoveable()) {
-          setCatX((prev) => prev + movement.x);
-          setCatY((prev) => prev + movement.y);
-          setCatImage(
-            dir === Direction.LEFT
-              ? CharacterImages.catLeft
-              : CharacterImages.catRight
-          );
+          setCharX((prev) => prev + movement.x);
+          setCharY((prev) => prev + movement.y);
+          setCharImage(getImageByDirection(dir));
           handled = true;
           break;
         }
@@ -70,7 +135,7 @@ const Character = () => {
         e.preventDefault(); // Prevent default scrolling behavior for arrow keys
       }
     },
-    [catX, catY]
+    [charX, charY, boundaryCollision]
   );
 
   useEffect(() => {
@@ -81,7 +146,28 @@ const Character = () => {
     };
   }, [handleArrowKeyDown]);
 
-  return <Sprite image={catImage} x={catX} y={catY} />;
+  return (
+    <>
+      {boundaries.map((i, idx) => (
+        <Sprite
+          key={idx}
+          image={charImage}
+          x={i.position.x}
+          y={i.position.y}
+          width={8}
+          height={8}
+        />
+      ))}
+      <Sprite image={charImage} x={charX} y={charY} width={60} height={60} />
+    </>
+  );
+};
+
+const getImageByDirection = (dir) => {
+  if (dir === Direction.LEFT) return CharacterImages.char1L;
+  else if (dir === Direction.DOWN) return CharacterImages.char1F;
+  else if (dir === Direction.UP) return CharacterImages.char1B;
+  else return CharacterImages.char1R;
 };
 
 export default Character;
