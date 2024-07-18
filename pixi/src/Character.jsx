@@ -65,16 +65,17 @@ const Character = () => {
 
   const [charImage, setCharImage] = useState(CharacterImages.char1F);
   const [charX, setCharX] = useState(217);
-  const [charY, setCharY] = useState(325);
+  const [charY, setCharY] = useState(320);
 
   const boundaryCollision = useCallback(
     (x, y) => {
+      console.log(boundaries);
       return boundaries.some((col) => {
         console.log(col.width, col.position.x, x, col.position.y, y);
         return (
-          col.position.x <= x &&
+          col.position.x <= x + SIZE &&
           col.position.x + col.width >= x &&
-          col.position.y <= y &&
+          col.position.y <= y + SIZE &&
           col.position.y + col.height >= y
         );
       });
@@ -92,28 +93,28 @@ const Character = () => {
           movement: { x: 0, y: -distance },
           dir: Direction.UP,
           isMoveable: () =>
-            charY > 0 && !boundaryCollision(charX, charY - SIZE),
+            charY > 0 && !boundaryCollision(charX, charY - distance),
         },
         {
           code: "KeyS",
           movement: { x: 0, y: distance },
           dir: Direction.DOWN,
           isMoveable: () =>
-            charY < MAP_Y - SIZE && !boundaryCollision(charX, charY + SIZE),
+            charY < MAP_Y - SIZE && !boundaryCollision(charX, charY + distance),
         },
         {
           code: "KeyD",
           movement: { x: distance, y: 0 },
           dir: Direction.RIGHT,
           isMoveable: () =>
-            charX < MAP_X - SIZE && !boundaryCollision(charX + SIZE, charY),
+            charX < MAP_X - SIZE && !boundaryCollision(charX + distance, charY),
         },
         {
           code: "KeyA",
           movement: { x: -distance, y: 0 },
           dir: Direction.LEFT,
           isMoveable: () =>
-            charX > 0 && !boundaryCollision(charX - SIZE, charY),
+            charX > 0 && !boundaryCollision(charX - distance, charY),
         },
       ];
 
@@ -158,6 +159,7 @@ const Character = () => {
           height={8}
         />
       ))}
+
       <Sprite image={charImage} x={charX} y={charY} width={60} height={60} />
     </>
   );
