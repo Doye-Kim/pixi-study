@@ -1,6 +1,7 @@
 import CharacterImages from "./CharacterImage";
 import { useState, useEffect, useCallback } from "react";
 import { Sprite } from "@pixi/react";
+import { Loader, Texture, Rectangle } from "pixi.js";
 import collisions from "./assets/home-collisions";
 
 const Direction = {
@@ -13,6 +14,8 @@ const Direction = {
 const MAP_X = 512;
 const MAP_Y = 384;
 const SIZE = 32;
+
+const charUrl = "http://localhost:5173/src/assets/char_1.png";
 
 class Boundary {
   static width = 8;
@@ -27,6 +30,35 @@ class Boundary {
 const Character = () => {
   const [collisionMap, setCollisionMap] = useState([]);
   const [boundaries, setBoundaries] = useState([]);
+
+  const [textures, setTextures] = useState([]);
+
+  useEffect(() => {
+    const loader = Loader.shared;
+
+    loader.add("character", charUrl).load((loader, resources) => {
+      // 리소스 로드 완료 후 처리
+      const characterTexture = resources.character.texture;
+      // 여기서부터 리소스 사용 가능
+
+      const baseTexture = resources.character.texture.baseTexture;
+
+      // 텍스처를 담을 배열
+      const texturesArray = [];
+
+      for (let y = 0; y < 128; y += 32) {
+        for (let x = 0; x < 256; x += 32) {
+          // PIXI.Rectangle을 사용하여 프레임의 위치와 크기 정의
+          const frame = new Rectangle(x, y, 32, 32);
+          // PIXI.Texture.from을 사용하여 텍스처 생성 후 배열에 추가
+          texturesArray.push(new Texture(baseTexture, frame));
+        }
+      }
+
+      // 텍스처 배열 상태 업데이트
+      setTextures(texturesArray);
+    });
+  }, []);
 
   useEffect(() => {
     const initializeCollisionMap = () => {
@@ -147,9 +179,13 @@ const Character = () => {
     };
   }, [handleArrowKeyDown]);
 
+  if (textures.length === 0) {
+    return null;
+  }
+
   return (
     <>
-      {boundaries.map((i, idx) => (
+      {/* {boundaries.map((i, idx) => (
         <Sprite
           key={idx}
           image={charImage}
@@ -158,9 +194,19 @@ const Character = () => {
           width={8}
           height={8}
         />
-      ))}
-
-      <Sprite image={charImage} x={charX} y={charY} width={60} height={60} />
+      ))} */}
+      <div>
+        {textures.map((texture, index) => (
+          <img
+            key={index}
+            src={texture.baseTexture.resource.source.src}
+            alt={`Texture ${index}`}
+            width={32}
+            height={32}
+          />
+        ))}
+      </div>
+      {/* <Sprite image={charImage} x={charX} y={charY} width={60} height={60} /> */}
     </>
   );
 };
