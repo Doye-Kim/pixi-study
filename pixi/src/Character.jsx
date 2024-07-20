@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Sprite } from "@pixi/react";
 import collisions from "./assets/home-collisions";
 
-const collisionImg = 'http://localhost:5173/src/assets/충돌픽셀.png'
+// const collisionImg = 'http://localhost:5173/src/assets/충돌픽셀.png'
 const Direction = {
   DOWN: 0,
   UP: 1,
@@ -125,14 +125,14 @@ const Character = () => {
       for (let i = 0; i < ArrowKeys.length; i++) {
         const { code, movement, dir, isMoveable } = ArrowKeys[i];
 
-        if (e.code === code && isMoveable()) {
-          setCharX((prev) => prev + movement.x);
-          setCharY((prev) => prev + movement.y);
-          console.log(charX, charY);
+        if (e.code === code){
           setCharImage(getImageByDirection(dir));
-          // console.log('move');
+          if(isMoveable()) {
+            setCharX((prev) => prev + movement.x);
+          setCharY((prev) => prev + movement.y);
           handled = true;
           break;
+          }
         }
       }
 
