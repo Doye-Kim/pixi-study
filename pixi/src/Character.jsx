@@ -2,8 +2,11 @@ import CharacterImages from "./CharacterImages";
 import { useState, useEffect, useCallback } from "react";
 import { Sprite } from "@pixi/react";
 import collisions from "./assets/home-collisions";
+import {
+  initializeCollisionMap,
+  initializeBoundaries,
+} from "./utils/collisionUtils";
 
-// const collisionImg = 'http://localhost:5173/src/assets/충돌픽셀.png'
 const Direction = {
   DOWN: 0,
   UP: 1,
@@ -14,7 +17,10 @@ const Direction = {
 const MAP_X = 488;
 const MAP_Y = 384;
 const SIZE = 32;
+const FRAME_COUNT = 4;
 
+const BoundaryWidth = 8;
+const BoundaryHeight = 8;
 
 class Boundary {
   static width = 8;
@@ -29,45 +35,23 @@ class Boundary {
 const Character = () => {
   const [collisionMap, setCollisionMap] = useState([]);
   const [boundaries, setBoundaries] = useState([]);
-
-  useEffect(() => {
-    const initializeCollisionMap = () => {
-      let tempCollisionMap = [];
-      for (let i = 0; i < collisions.length; i += 61) {
-        tempCollisionMap.push(collisions.slice(i, i + 61));
-      }
-      return tempCollisionMap;
-    };
-
-    const initializeBoundaries = (collisionMap) => {
-      let tempBoundaries = [];
-      collisionMap.forEach((row, i) => {
-        row.forEach((symbol, j) => {
-          if (symbol === 15) {
-            tempBoundaries.push({
-              position: {
-                x: j * Boundary.width,
-                y: i * Boundary.height,
-              },
-              width: Boundary.width,
-              height: Boundary.height,
-            });
-          }
-        });
-      });
-      return tempBoundaries;
-    };
-
-    const collisionMap = initializeCollisionMap();
-    setCollisionMap(collisionMap);
-
-    const boundaries = initializeBoundaries(collisionMap);
-    setBoundaries(boundaries);
-  }, []);
-
-  const [charImage, setCharImage] = useState(CharacterImages.char1F);
+  const [stepIndex, setStepIndex] = useState(0);
+  const [direction, setDirection] = useState(0);
+  const [charImage, setCharImage] = useState(CharacterImages.char_1d1);
   const [charX, setCharX] = useState(217);
   const [charY, setCharY] = useState(320);
+
+  useEffect(() => {
+    const collisionMap = initializeCollisionMap(collisions);
+    setCollisionMap(collisionMap);
+
+    const boundaries = initializeBoundaries(
+      collisionMap,
+      BoundaryWidth,
+      BoundaryHeight
+    );
+    setBoundaries(boundaries);
+  }, []);
 
   const boundaryCollision = useCallback(
     (x, y) => {
@@ -88,35 +72,37 @@ const Character = () => {
   const handleArrowKeyDown = useCallback(
     (e) => {
       console.log("handleArrowKeyDown");
-      const distance = 12;
+      const distance = 8;
       const ArrowKeys = [
         {
           code: "KeyW",
           movement: { x: 0, y: -distance },
           dir: Direction.UP,
           isMoveable: () =>
-            charY-16 > 0 && !boundaryCollision(charX, charY - distance),
+            charY - 16 > 0 && !boundaryCollision(charX, charY - distance),
         },
         {
           code: "KeyS",
           movement: { x: 0, y: distance },
           dir: Direction.DOWN,
           isMoveable: () =>
-            charY+24 < MAP_Y - SIZE && !boundaryCollision(charX, charY + distance),
+            charY + 24 < MAP_Y - SIZE &&
+            !boundaryCollision(charX, charY + distance),
         },
         {
           code: "KeyD",
           movement: { x: distance, y: 0 },
           dir: Direction.RIGHT,
           isMoveable: () =>
-            charX+16 < MAP_X - SIZE && !boundaryCollision(charX + distance, charY),
+            charX + 16 < MAP_X - SIZE &&
+            !boundaryCollision(charX + distance, charY),
         },
         {
           code: "KeyA",
           movement: { x: -distance, y: 0 },
           dir: Direction.LEFT,
           isMoveable: () =>
-            charX+16 > 0 && !boundaryCollision(charX - distance, charY),
+            charX + 16 > 0 && !boundaryCollision(charX - distance, charY),
         },
       ];
 
@@ -125,13 +111,14 @@ const Character = () => {
       for (let i = 0; i < ArrowKeys.length; i++) {
         const { code, movement, dir, isMoveable } = ArrowKeys[i];
 
-        if (e.code === code){
+        if (e.code === code) {
+          // console.log(getImageByDirection(dir));
           setCharImage(getImageByDirection(dir));
-          if(isMoveable()) {
+          if (isMoveable()) {
             setCharX((prev) => prev + movement.x);
-          setCharY((prev) => prev + movement.y);
-          handled = true;
-          break;
+            setCharY((prev) => prev + movement.y);
+            handled = true;
+            break;
           }
         }
       }
@@ -151,21 +138,24 @@ const Character = () => {
     };
   }, [handleArrowKeyDown]);
 
+  const getImageByDirection = (dir) => {
+    console.log(dir, direction);
+    setStepIndex((prev) => {
+      return direction !== dir ? 0 : (prev + 1) % FRAME_COUNT;
+    });
+    setDirection(dir);
+    console.log(dir, direction, stepIndex, directionImages[dir][stepIndex]);
+    return directionImages[direction][stepIndex];
+  };
+  // todo #1
+  // 막히면 이미지 변경 금지
+
+  // todo #2
+  // 걷다가 멈췄을 때 정적 이미지로 변경
 
   return (
     <>
-      {/* {boundaries.map((i, idx) => (
-        <Sprite
-          key={idx}
-          image={collisionImg}
-          x={i.position.x}
-          y={i.position.y}
-          width={8}
-          height={8}
-        />
-      ))} */}
-
-        {/* {textures.map((texture, index) => (
+      {/* {textures.map((texture, index) => (
           <img
             key={index}
             src={texture.baseTexture.resource.source.src}
@@ -175,16 +165,42 @@ const Character = () => {
           />
         ))} */}
 
-      <Sprite image={charImage} x={charX} y={charY} width={60} height={60} />
+      <Sprite
+        image={directionImages[direction][stepIndex]}
+        x={charX}
+        y={charY}
+        width={60}
+        height={60}
+      />
     </>
   );
 };
 
-const getImageByDirection = (dir) => {
-  if (dir === Direction.LEFT) return CharacterImages.char1L;
-  else if (dir === Direction.DOWN) return CharacterImages.char1F;
-  else if (dir === Direction.UP) return CharacterImages.char1B;
-  else return CharacterImages.char1R;
+const directionImages = {
+  [Direction.UP]: [
+    CharacterImages.char_1u1,
+    CharacterImages.char_1u2,
+    CharacterImages.char_1u3,
+    CharacterImages.char_1u4,
+  ],
+  [Direction.DOWN]: [
+    CharacterImages.char_1d1,
+    CharacterImages.char_1d2,
+    CharacterImages.char_1d3,
+    CharacterImages.char_1d4,
+  ],
+  [Direction.RIGHT]: [
+    CharacterImages.char_1r1,
+    CharacterImages.char_1r2,
+    CharacterImages.char_1r3,
+    CharacterImages.char_1r4,
+  ],
+  [Direction.LEFT]: [
+    CharacterImages.char_1l1,
+    CharacterImages.char_1l2,
+    CharacterImages.char_1l3,
+    CharacterImages.char_1l4,
+  ],
 };
 
 export default Character;
