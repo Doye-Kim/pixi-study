@@ -22,16 +22,6 @@ const FRAME_COUNT = 4;
 const BoundaryWidth = 8;
 const BoundaryHeight = 8;
 
-class Boundary {
-  static width = 8;
-  static height = 8;
-  constructor({ position }) {
-    this.position = position;
-    this.width = 8;
-    this.height = 8;
-  }
-}
-
 const Character = () => {
   const [collisionMap, setCollisionMap] = useState([]);
   const [boundaries, setBoundaries] = useState([]);
@@ -59,8 +49,8 @@ const Character = () => {
       return boundaries.some((col) => {
         // console.log(col.width, col.position.x, x, col.position.y, y);
         return (
-          col.position.x + 8 >= x + 16 &&
-          col.position.y + 8 >= y + 35 &&
+          col.position.x + BoundaryWidth >= x + 16 &&
+          col.position.y + BoundaryHeight >= y + 35 &&
           x + 48 >= col.position.x &&
           y + 40 >= col.position.y
         );
