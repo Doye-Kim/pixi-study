@@ -6,12 +6,13 @@ const MAP_X = 488;
 const MAP_Y = 384;
 
 const mapUrl = "http://localhost:5173/src/assets/home.png";
-
+const forwardHomeUrl = "http://localhost:5173/src/assets/forward_home.png";
 const Map = () => {
   return (
     <Stage width={MAP_X} height={MAP_Y}>
       <Sprite image={mapUrl} x={0} y={0} />
       <Character />
+      <Sprite image={forwardHomeUrl} x={0} y={0} />
     </Stage>
   );
 };

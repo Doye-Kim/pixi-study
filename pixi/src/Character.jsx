@@ -1,11 +1,14 @@
 import CharacterImages from "./CharacterImages";
 import { useState, useEffect, useCallback } from "react";
-import { Sprite } from "@pixi/react";
 import collisions from "./assets/home-collisions";
+import { Sprite, Container } from "@pixi/react";
+
 import {
   initializeCollisionMap,
   initializeBoundaries,
 } from "./utils/collisionUtils";
+import throttle from "./utils/throttle";
+import Nickname from "./Nickname";
 
 const Direction = {
   DOWN: 0,
@@ -17,7 +20,6 @@ const Direction = {
 const MAP_X = 488;
 const MAP_Y = 384;
 const SIZE = 32;
-const FRAME_COUNT = 4;
 
 const BoundaryWidth = 8;
 const BoundaryHeight = 8;
@@ -29,7 +31,9 @@ const Character = () => {
   const [direction, setDirection] = useState(0);
   const [charImage, setCharImage] = useState(CharacterImages.char_1d1);
   const [charX, setCharX] = useState(217);
-  const [charY, setCharY] = useState(320);
+  const [charY, setCharY] = useState(300);
+  const [animationTimer, setAnimationTimer] = useState(null);
+  const [isAnimating, setIsAnimating] = useState(true);
 
   useEffect(() => {
     const collisionMap = initializeCollisionMap(collisions);
@@ -45,9 +49,7 @@ const Character = () => {
 
   const boundaryCollision = useCallback(
     (x, y) => {
-      // console.log(boundaries);
       return boundaries.some((col) => {
-        // console.log(col.width, col.position.x, x, col.position.y, y);
         return (
           col.position.x + BoundaryWidth >= x + 16 &&
           col.position.y + BoundaryHeight >= y + 35 &&
@@ -61,38 +63,39 @@ const Character = () => {
 
   const handleArrowKeyDown = useCallback(
     (e) => {
-      console.log("handleArrowKeyDown");
-      const distance = 8;
+      console.log("keydown");
+      setIsAnimating(true);
+      const distance = 9;
       const ArrowKeys = [
         {
           code: "KeyW",
           movement: { x: 0, y: -distance },
           dir: Direction.UP,
-          isMoveable: () =>
-            charY - 16 > 0 && !boundaryCollision(charX, charY - distance),
+          isMoveable: () => charY - 16 > 0,
         },
         {
           code: "KeyS",
           movement: { x: 0, y: distance },
           dir: Direction.DOWN,
-          isMoveable: () =>
-            charY + 24 < MAP_Y - SIZE &&
-            !boundaryCollision(charX, charY + distance),
+          isMoveable: () => charY + 24 < MAP_Y - SIZE,
         },
         {
           code: "KeyD",
           movement: { x: distance, y: 0 },
           dir: Direction.RIGHT,
-          isMoveable: () =>
-            charX + 16 < MAP_X - SIZE &&
-            !boundaryCollision(charX + distance, charY),
+          isMoveable: () => charX + 16 < MAP_X - SIZE,
         },
         {
           code: "KeyA",
           movement: { x: -distance, y: 0 },
           dir: Direction.LEFT,
-          isMoveable: () =>
-            charX + 16 > 0 && !boundaryCollision(charX - distance, charY),
+          isMoveable: () => charX + 16 > 0,
+        },
+        {
+          code: "Space",
+          movement: { x: 0, y: 0 },
+          dir: direction,
+          isMoveable: () => false,
         },
       ];
 
@@ -102,11 +105,15 @@ const Character = () => {
         const { code, movement, dir, isMoveable } = ArrowKeys[i];
 
         if (e.code === code) {
-          // console.log(getImageByDirection(dir));
-          setCharImage(getImageByDirection(dir));
-          if (isMoveable()) {
-            setCharX((prev) => prev + movement.x);
-            setCharY((prev) => prev + movement.y);
+          if (direction !== dir) {
+            setDirection(dir);
+            setStepIndex(0);
+            setCharImage(directionImages[dir][0]);
+          } else if (!isAnimating && isMoveable()) {
+            // 한 번 누른 거 처리
+            setCharImage(getImageByDirection(dir));
+          } else if (isMoveable()) {
+            setCharImage(getImageByDirection(dir));
             handled = true;
             break;
           }
@@ -114,54 +121,85 @@ const Character = () => {
       }
 
       if (handled) {
-        e.preventDefault(); // Prevent default scrolling behavior for arrow keys
+        e.preventDefault();
       }
     },
-    [charX, charY, boundaryCollision]
+    [charX, charY, boundaryCollision, direction, isAnimating]
   );
+  const handleArrowKeyUp = useCallback(() => {
+    setIsAnimating(false);
+    setStepIndex(0);
+    if (animationTimer) {
+      clearTimeout(animationTimer);
+    }
+  }, [animationTimer]);
 
   useEffect(() => {
     document.addEventListener("keydown", handleArrowKeyDown);
-    // console.log(boundaries);
+    document.addEventListener("keyup", handleArrowKeyUp);
     return () => {
       document.removeEventListener("keydown", handleArrowKeyDown);
+      document.removeEventListener("keyup", handleArrowKeyUp);
     };
-  }, [handleArrowKeyDown]);
+  }, [handleArrowKeyDown, handleArrowKeyUp]);
 
   const getImageByDirection = (dir) => {
-    console.log(dir, direction);
-    setStepIndex((prev) => {
-      return direction !== dir ? 0 : (prev + 1) % FRAME_COUNT;
-    });
-    setDirection(dir);
-    console.log(dir, direction, stepIndex, directionImages[dir][stepIndex]);
-    return directionImages[direction][stepIndex];
-  };
-  // todo #1
-  // 막히면 이미지 변경 금지
+    if (animationTimer) {
+      clearTimeout(animationTimer);
+    }
 
-  // todo #2
-  // 걷다가 멈췄을 때 정적 이미지로 변경
+    const animate = throttle((frame = stepIndex) => {
+      // console.log("animate", frame, stepIndex);
+      setStepIndex(frame);
+      setCharImage(directionImages[dir][frame]);
+
+      // 좌표 변경 로직 추가
+      const moveDistance = 7;
+      switch (dir) {
+        case Direction.UP:
+          if (!boundaryCollision(charX, charY - moveDistance))
+            setCharY((prev) => prev - moveDistance);
+          break;
+        case Direction.DOWN:
+          if (!boundaryCollision(charX, charY + moveDistance))
+            setCharY((prev) => prev + moveDistance);
+          break;
+        case Direction.LEFT:
+          if (!boundaryCollision(charX - moveDistance, charY))
+            setCharX((prev) => prev - moveDistance);
+          break;
+        case Direction.RIGHT:
+          if (!boundaryCollision(charX + moveDistance, charY))
+            setCharX((prev) => prev + moveDistance);
+          break;
+        default:
+          break;
+      }
+
+      if (frame === 2) {
+        setStepIndex(0);
+      } else {
+        setAnimationTimer(setTimeout(() => animate(frame + 1), 100));
+        setStepIndex(frame + 1);
+      }
+    }, 1000);
+
+    animate();
+    return directionImages[dir][stepIndex];
+  };
 
   return (
     <>
-      {/* {textures.map((texture, index) => (
-          <img
-            key={index}
-            src={texture.baseTexture.resource.source.src}
-            alt={`Texture ${index}`}
-            width={32}
-            height={32}
-          />
-        ))} */}
-
-      <Sprite
-        image={directionImages[direction][stepIndex]}
-        x={charX}
-        y={charY}
-        width={60}
-        height={60}
-      />
+      <Container x={charX} y={charY}>
+        <Sprite
+          image={directionImages[direction][stepIndex]}
+          x={0}
+          y={0}
+          width={60}
+          height={60}
+        />
+        <Nickname width={60} height={60} text="브로콜리맨" />
+      </Container>
     </>
   );
 };
@@ -170,25 +208,21 @@ const directionImages = {
   [Direction.UP]: [
     CharacterImages.char_1u1,
     CharacterImages.char_1u2,
-    CharacterImages.char_1u3,
     CharacterImages.char_1u4,
   ],
   [Direction.DOWN]: [
     CharacterImages.char_1d1,
     CharacterImages.char_1d2,
-    CharacterImages.char_1d3,
     CharacterImages.char_1d4,
   ],
   [Direction.RIGHT]: [
     CharacterImages.char_1r1,
     CharacterImages.char_1r2,
-    CharacterImages.char_1r3,
     CharacterImages.char_1r4,
   ],
   [Direction.LEFT]: [
     CharacterImages.char_1l1,
     CharacterImages.char_1l2,
-    CharacterImages.char_1l3,
     CharacterImages.char_1l4,
   ],
 };
