@@ -24,13 +24,15 @@ const SIZE = 32;
 const BoundaryWidth = 8;
 const BoundaryHeight = 8;
 
-const Character = () => {
+const Character = ({ backgroundX, backgroundY }) => {
   const [collisionMap, setCollisionMap] = useState([]);
   const [boundaries, setBoundaries] = useState([]);
   const [stepIndex, setStepIndex] = useState(0);
   const [direction, setDirection] = useState(0);
-  const [charX, setCharX] = useState(217);
-  const [charY, setCharY] = useState(300);
+  const [charX, setCharX] = useState(270);
+  const [charY, setCharY] = useState(40);
+  const [mx, setMx] = useState(backgroundX);
+  const [my, setMy] = useState(backgroundY);
   const [isAnimating, setIsAnimating] = useState(false);
 
   const animationFrameRef = useRef(null);
@@ -47,19 +49,19 @@ const Character = () => {
     setBoundaries(boundaries);
   }, []);
 
-  const boundaryCollision = useCallback(
-    (x, y) => {
-      return boundaries.some((col) => {
-        return (
-          col.position.x + BoundaryWidth >= x + 16 &&
-          col.position.y + BoundaryHeight >= y + 35 &&
-          x + 48 >= col.position.x &&
-          y + 40 >= col.position.y
-        );
-      });
-    },
-    [boundaries]
-  );
+  //   const boundaryCollision = useCallback(
+  //     (x, y) => {
+  //       return boundaries.some((col) => {
+  //         return (
+  //           col.position.x + BoundaryWidth >= x + 16 &&
+  //           col.position.y + BoundaryHeight >= y + 35 &&
+  //           x + 48 >= col.position.x &&
+  //           y + 40 >= col.position.y
+  //         );
+  //       });
+  //     },
+  //     [boundaries]
+  //   );
 
   const handleArrowKeyDown = useCallback(
     (e) => {
@@ -120,7 +122,7 @@ const Character = () => {
         e.preventDefault();
       }
     },
-    [charX, charY, boundaryCollision, direction, isAnimating]
+    [charX, charY, direction, isAnimating]
   );
 
   const handleArrowKeyUp = useCallback(() => {
@@ -156,25 +158,25 @@ const Character = () => {
   }, [isAnimating, stepIndex, direction, charX, charY]);
 
   const animate = () => {
-    setStepIndex((prev) => (prev + 1) % 3);
+    setStepIndex((prev) => (prev + 1) % 6);
     const moveDistance = 7;
 
     switch (direction) {
       case Direction.UP:
-        if (!boundaryCollision(charX, charY - moveDistance))
-          setCharY((prev) => prev - moveDistance);
+        setCharY((prev) => prev - moveDistance);
+        backgroundX += moveDistance;
         break;
       case Direction.DOWN:
-        if (!boundaryCollision(charX, charY + moveDistance))
-          setCharY((prev) => prev + moveDistance);
+        setCharY((prev) => prev + moveDistance);
+        setMy((prev) => prev - moveDistance);
         break;
       case Direction.LEFT:
-        if (!boundaryCollision(charX - moveDistance, charY))
-          setCharX((prev) => prev - moveDistance);
+        setCharX((prev) => prev - moveDistance);
+        setMx((prev) => prev + moveDistance);
         break;
       case Direction.RIGHT:
-        if (!boundaryCollision(charX + moveDistance, charY))
-          setCharX((prev) => prev + moveDistance);
+        setCharX((prev) => prev + moveDistance);
+        setMx((prev) => prev - moveDistance);
         break;
       default:
         break;
@@ -184,7 +186,7 @@ const Character = () => {
   };
 
   return (
-    <Container x={charX} y={charY}>
+    <Container x={charX} y={charY} style={{ width: "100%", height: "100%" }}>
       <Sprite
         image={directionImages[direction][stepIndex]}
         x={0}
@@ -202,21 +204,33 @@ const directionImages = {
     CharacterImages.char_1u1,
     CharacterImages.char_1u2,
     CharacterImages.char_1u4,
+    CharacterImages.char_1u5,
+    CharacterImages.char_1u6,
+    CharacterImages.char_1u8,
   ],
   [Direction.DOWN]: [
     CharacterImages.char_1d1,
     CharacterImages.char_1d2,
     CharacterImages.char_1d4,
+    CharacterImages.char_1d5,
+    CharacterImages.char_1d6,
+    CharacterImages.char_1d8,
   ],
   [Direction.RIGHT]: [
     CharacterImages.char_1r1,
     CharacterImages.char_1r2,
     CharacterImages.char_1r4,
+    CharacterImages.char_1r5,
+    CharacterImages.char_1r6,
+    CharacterImages.char_1r8,
   ],
   [Direction.LEFT]: [
     CharacterImages.char_1l1,
     CharacterImages.char_1l2,
     CharacterImages.char_1l4,
+    CharacterImages.char_1l5,
+    CharacterImages.char_1l6,
+    CharacterImages.char_1l8,
   ],
 };
 

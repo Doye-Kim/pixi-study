@@ -1,18 +1,33 @@
 import "./App.css";
-import Character from "./Character";
+import MapCharacter from "./MapCharacter";
+import { useRef } from "react";
 import { Stage, Sprite } from "@pixi/react";
 
-const MAP_X = 488;
-const MAP_Y = 384;
-
-const mapUrl = "http://localhost:5173/src/assets/home.png";
-const forwardHomeUrl = "http://localhost:5173/src/assets/forward_home.png";
+const mapUrl = "http://localhost:5173/src/assets/map22.png";
+const characterUrl = "http://localhost:5173/src/assets/char_1/char_1 (0_0).png";
 const Map = () => {
+  const appOptions = {
+    resizeto: window,
+    width: window.innerWidth,
+    height: window.innerHeight,
+    backgroundcolor: 0x1099bb,
+  };
+
+  const handleResize = () => {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    return { width, height };
+  };
+  const backgroundX = useRef(-500);
+  const backgroundY = useRef(-700);
   return (
-    <Stage width={MAP_X} height={MAP_Y}>
-      <Sprite image={mapUrl} x={0} y={0} />
-      <Character />
-      <Sprite image={forwardHomeUrl} x={0} y={0} />
+    <Stage
+      {...appOptions}
+      onResize={handleResize}
+      style={{ width: "100%", height: "100%" }}
+    >
+      <Sprite image={mapUrl} x={backgroundX} y={backgroundY} />
+      <MapCharacter backgroundX={backgroundX} backgroundY={backgroundY} />
     </Stage>
   );
 };
